@@ -44,6 +44,7 @@ module Minion
   end
 
   def job(queue, options = {}, &blk)
+    ack = ! (options[:ack] == false) # set to true unless it's explicitly false
     handler = Minion::Handler.new queue
     handler.when = options[:when] if options[:when]
     handler.unsub = lambda do
@@ -66,7 +67,7 @@ module Minion
           raise unless error_handler
           error_handler.call(e,queue,m,h)
         end
-        h.ack
+        h.ack if ack
         check_all
       end
     end
