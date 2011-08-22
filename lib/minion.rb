@@ -25,9 +25,9 @@ module Minion
 
     encoded = JSON.dump(data)
     log "send: #{queue}:#{encoded}"
-    q = bunny.queue(queue, durable: true, auto_delete: false)
+    q = bunny.queue(queue, :durable => true, :auto_delete => false)
     e = bunny.exchange('') # Connect to default exchange
-    e.publish(encoded, key: q.name)
+    e.publish(encoded, :key => q.name)
   end
 
   def log(msg)
