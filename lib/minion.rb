@@ -49,11 +49,11 @@ module Minion
     handler.when = options[:when] if options[:when]
     handler.unsub = lambda do
       log "unsubscribing to #{queue}"
-      MQ.queue(queue, :durable => true, :auto_delete => false).unsubscribe
+      AMQP::Channel.new.queue(queue, :durable => true, :auto_delete => false).unsubscribe
     end
     handler.sub = lambda do
       log "subscribing to #{queue}"
-      MQ.queue(queue, :durable => true, :auto_delete => false).subscribe(:ack => true) do |h,m|
+      AMQP::Channel.new.queue(queue, :durable => true, :auto_delete => false).subscribe(:ack => true) do |h,m|
         return if AMQP.closing?
         begin
           log "recv: #{queue}:#{m}, #{h}"
