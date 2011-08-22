@@ -55,11 +55,11 @@ module Minion
       MQ.queue(queue, :durable => true, :auto_delete => false).subscribe(:ack => true) do |h,m|
         return if AMQP.closing?
         begin
-          log "recv: #{queue}:#{m}"
+          log "recv: #{queue}:#{m}, #{h}"
 
           args = decode_json(m)
 
-          result = yield(args)
+          result = yield(args, h)
 
           next_job(args, result)
         rescue Object => e
