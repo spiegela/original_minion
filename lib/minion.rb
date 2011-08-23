@@ -29,6 +29,10 @@ module Minion
     e = bunny.exchange('') # Connect to default exchange
     e.publish(encoded, :key => q.name)
   end
+  
+  def message_count(queue)
+    bunny.queue(queue, :durable => true, :auto_delete => false).message_count
+  end
 
   def log(msg)
     @@logger ||= proc { |m| puts "#{Time.now} :minion: #{m}" }
@@ -44,7 +48,6 @@ module Minion
   end
 
   def job(queue, options = {}, &blk)
-    ack = ! (options[:ack] == false) # set to true unless it's explicitly false
     handler = Minion::Handler.new queue
     handler.when = options[:when] if options[:when]
     handler.unsub = lambda do
@@ -53,7 +56,9 @@ module Minion
     end
     handler.sub = lambda do
       log "subscribing to #{queue}"
-      AMQP::Channel.new.queue(queue, :durable => true, :auto_delete => false).subscribe(:ack => true) do |h,m|
+      chan = AMQP::Channel.new
+      chan.prefetch(options[:prefetch] || 1)
+      chan.queue(queue, :durable => true, :auto_delete => false).subscribe(:ack => true) do |h,m|
         return if AMQP.closing?
         begin
           log "recv: #{queue}:#{m}, #{h}"
@@ -67,7 +72,7 @@ module Minion
           raise unless error_handler
           error_handler.call(e,queue,m,h)
         end
-        h.ack if ack
+        h.ack unless options[:ack] == false
         check_all
       end
     end
@@ -96,7 +101,6 @@ module Minion
 
     EM.run do
       AMQP.start(amqp_config) do
-        MQ.prefetch(1)
         check_all
       end
     end
